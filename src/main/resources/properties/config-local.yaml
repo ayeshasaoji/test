@@ -1,0 +1,40 @@
+#Autodiscovery API ID
+api:
+  autodiscovery.id: "1111111111"
+  name: "opg-sapi-procore-cmd"
+  version: "v1.0"
+  path: "api/${secure::api.name}/${secure::api.version}"
+  
+https:
+  listener:
+    host: "0.0.0.0"
+    port: "8081"
+    private.port: "8092"
+    keystore:
+      file: "ssl/identity.p12"
+      alias: "selfsigned"
+      password: "![jFWIClseNCQsJbB8IKY4gQ==]"
+      key.password: "![jFWIClseNCQsJbB8IKY4gQ==]"
+    trustore:
+      file: ""
+      alias: ""
+      password: ""
+  request:
+    insecure: "true"
+    timeout:
+      connection-idle: "500000"
+      response: "5000"
+    truststore:
+      file: "ssl/trusted-client-truststore.p12"
+      password: "![jFWIClseNCQsJbB8IKY4gQ==]"           
+
+#json.logger:
+#  debug.on: "true"
+#  payload.max.length: "10"
+#  dissabled.fields: "message"
+#  masked.fields: "$.id,email,ssn,phone,$..street,username,password,secret"
+  
+error.handler:
+  externalid:
+    ttl.interval: "30"
+    ttl.unit: "SECONDS"

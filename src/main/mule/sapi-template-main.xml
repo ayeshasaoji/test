@@ -1,0 +1,843 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:module-error-handler-plugin="http://www.mulesoft.org/schema/mule/module-error-handler-plugin" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/module-error-handler-plugin http://www.mulesoft.org/schema/mule/module-error-handler-plugin/current/mule-module-error-handler-plugin.xsd">
+    <flow name="onpoint-sapi-procore-cmd-v1-main">
+        <http:listener config-ref="HTTP_Listener_Config" path="/${secure::api.path}/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="onpoint-sapi-procore-cmd-v1-config" />
+        <error-handler>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="65987db2-831a-4c4b-837f-b0bd3a704a1c" >
+				<flow-ref doc:name="error-handler-subflow" doc:id="7c3b32c9-a47a-49aa-a93f-bad42abfb1d6" name="error-handler-subflow"/>
+			</on-error-continue>
+        </error-handler>
+    </flow>
+	<sub-flow name="error-handler-subflow" doc:id="e30ef03c-7ee2-4de0-a2f7-75a78e763933" doc:description="This flow can be re-used across different flows to create an error payload and log an exception">
+		<module-error-handler-plugin:on-error doc:name="Create Error Payload + Log to Salesforce" doc:id="632ce8ca-91b4-4276-b100-84a0779a1c0e" config-ref="Error_Handler_Plugin_Config" keyRecordId="#[if ((payload is Object or payload is Array) and (payload.data.id != null)) payload.data.id else '']">
+					<module-error-handler-plugin:custom-errors><![CDATA[#[${file::dwl/custom-errors.dwl}]]]></module-error-handler-plugin:custom-errors>
+				</module-error-handler-plugin:on-error>
+		<set-variable value="#[attributes.httpStatus]" doc:name="httpStatus" doc:id="002404ef-ada4-4108-8c28-9cf3a4fff2c9" variableName="httpStatus" />
+	</sub-flow>
+    <flow name="patch:\budgetLines\(id)\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    budgetLineItems: {
+      entityName: "BudgetLineItem",
+      id: "1234",
+      companyId: 123,
+      projectId: 124,
+      wbsCodeId: 67890,
+      originalBudgetAmount: 10000,
+      uom: "hours",
+      quantity: 250.5,
+      unitCost: 123.5,
+      calculationStrategy: "manual"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\primaryContracts\(id)\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContract",
+      id: "1234",
+      name: "Station 3",
+      title: "Station 3",
+      actualCompletionDate: "2017-03-31",
+      approvalLetterDate: "2014-01-02",
+      architectId: 160586,
+      contractorId: 13556,
+      contractDate: "2014-01-02",
+      contractEstimatedCompletionDate: "2017-01-31",
+      contractStartDate: "2015-01-31",
+      description: "New Building",
+      exclusions: "Decoration",
+      isExecuted: true,
+      executionDate: "2014-01-02",
+      inclusions: "Floor",
+      issuedOnDate: "2014-01-02",
+      letterOfIntentDate: "2014-01-02",
+      originData: "XYZ-012",
+      originId: "abc-123",
+      retainagePercent: 10,
+      returnedDate: "2014-01-02",
+      signedContractReceivedDate: "2015-01-30",
+      status: "Approved",
+      vendorId: 1254,
+      accountingMethod: "amount"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\primaryContractLines\(id)\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContractLineItem",
+      id: "1234",
+      name: "1234 - Sandbox Test Project",
+      number: "1234",
+      companyId: 123,
+      projectId: 1234,
+      amount: 1000,
+      costCodeId: 77408196,
+      description: "Cleanup",
+      extendedType: "calculated",
+      quantity: 20,
+      lineItemTypeId: 5085801,
+      originData: "AC-1234",
+      originId: 55555,
+      taxCodeId: 1,
+      unitCost: 50,
+      uom: "Hours",
+      wbsCodeId: 34567
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\primaryContractLines\(id)\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContractLineItem",
+      id: "1234",
+      name: "1234 - Sandbox Test Project",
+      number: "1234",
+      companyId: 123,
+      projectId: 1234,
+      amount: 1000,
+      costCodeId: 77408196,
+      description: "Cleanup",
+      extendedType: "calculated",
+      quantity: 20,
+      lineItemTypeId: 5085801,
+      originData: "AC-1234",
+      originId: 55555,
+      taxCodeId: 1,
+      unitCost: 50,
+      uom: "Hours",
+      wbsCodeId: 34567
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\primaryContracts\(id)\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContract",
+      id: "1234",
+      name: "Station 3",
+      title: "Station 3",
+      actualCompletionDate: "2017-03-31",
+      approvalLetterDate: "2014-01-02",
+      architectId: 160586,
+      contractorId: 13556,
+      contractDate: "2014-01-02",
+      contractEstimatedCompletionDate: "2017-01-31",
+      contractStartDate: "2015-01-31",
+      description: "New Building",
+      exclusions: "Decoration",
+      isExecuted: true,
+      executionDate: "2014-01-02",
+      inclusions: "Floor",
+      issuedOnDate: "2014-01-02",
+      letterOfIntentDate: "2014-01-02",
+      originData: "XYZ-012",
+      originId: "abc-123",
+      retainagePercent: 10,
+      returnedDate: "2014-01-02",
+      signedContractReceivedDate: "2015-01-30",
+      status: "Approved",
+      vendorId: 1254,
+      accountingMethod: "amount"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\projects\(id)\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "Project",
+      id: "1234",
+      completionDate: "2015-05-15",
+      totalValue: 10000,
+      warrantyStartDate: "2015-05-16",
+      warrantyEndDate: "2016-06-10",
+      flag: "Yellow",
+      imageId: 10,
+      name: "Project F",
+      officeId: 3610,
+      phone: "310-555-5555",
+      projectNumber: "A-2",
+      publicNotes: "Notes",
+      projectStageId: 1,
+      squareFeet: 5000,
+      stateCode: "CA",
+      timeZone: "US/Pacific",
+      zip: "93110",
+      parentJobId: 2,
+      programId: 5,
+      projectBidTypeId: 2,
+      projectTypeId: 5,
+      projectOwnerTypeId: 8,
+      projectRegionId: 22,
+      projectTemplateId: 99,
+      originId: "657",
+      originData: "AC-1234",
+      originCode: "Code 123",
+      overrideStartDate: "2015-05-15",
+      isOverrideStartDateCheck: true,
+      overrideEndDate: "2015-05-31",
+      isOverrideEndDateCheck: true,
+      estimatedValue: 10000,
+      estimatedStartDate: "2015-05-15",
+      estimatedCompletionDate: "2015-05-31",
+      storeNumber: "3",
+      accountingProjectNumber: "3456",
+      designatedMarketArea: "Southeast",
+      isErpIntegrated: true,
+      latitude: 34.3850464855729,
+      longitude: -119.490849121334,
+      isEnableCopyOfStandardCostCodes: true
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\projects\(id)\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "Project",
+      id: "1234",
+      completionDate: "2015-05-15",
+      totalValue: 10000,
+      warrantyStartDate: "2015-05-16",
+      warrantyEndDate: "2016-06-10",
+      flag: "Yellow",
+      imageId: 10,
+      name: "Project F",
+      officeId: 3610,
+      phone: "310-555-5555",
+      projectNumber: "A-2",
+      publicNotes: "Notes",
+      projectStageId: 1,
+      squareFeet: 5000,
+      stateCode: "CA",
+      timeZone: "US/Pacific",
+      zip: "93110",
+      parentJobId: 2,
+      programId: 5,
+      projectBidTypeId: 2,
+      projectTypeId: 5,
+      projectOwnerTypeId: 8,
+      projectRegionId: 22,
+      projectTemplateId: 99,
+      originId: "657",
+      originData: "AC-1234",
+      originCode: "Code 123",
+      overrideStartDate: "2015-05-15",
+      isOverrideStartDateCheck: true,
+      overrideEndDate: "2015-05-31",
+      isOverrideEndDateCheck: true,
+      estimatedValue: 10000,
+      estimatedStartDate: "2015-05-15",
+      estimatedCompletionDate: "2015-05-31",
+      storeNumber: "3",
+      accountingProjectNumber: "3456",
+      designatedMarketArea: "Southeast",
+      isErpIntegrated: true,
+      latitude: 34.3850464855729,
+      longitude: -119.490849121334,
+      isEnableCopyOfStandardCostCodes: true
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\budgetLines\(id)\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    budgetLineItems: {
+      entityName: "BudgetLineItem",
+      id: "1234",
+      companyId: 123,
+      projectId: 124,
+      wbsCodeId: 67890,
+      originalBudgetAmount: 10000,
+      uom: "hours",
+      quantity: 250.5,
+      unitCost: 123.5,
+      calculationStrategy: "manual"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\health:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  health: {
+    name: "onpoint-sapi-salesforce-query-v1",
+    apiVersion: "v1.0",
+    status: "up",
+    timestamp: "2022-01-12T12:04:22.55-05:00",
+    dependencies: [
+      {
+        name: "mysql-database",
+        status: "up",
+        message: "database is up and running"
+      }
+    ]
+  }
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\primaryContracts\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContract",
+      id: "1234",
+      name: "Station 3",
+      title: "Station 3",
+      actualCompletionDate: "2017-03-31",
+      approvalLetterDate: "2014-01-02",
+      architectId: 160586,
+      contractorId: 13556,
+      contractDate: "2014-01-02",
+      contractEstimatedCompletionDate: "2017-01-31",
+      contractStartDate: "2015-01-31",
+      description: "New Building",
+      exclusions: "Decoration",
+      isExecuted: true,
+      executionDate: "2014-01-02",
+      inclusions: "Floor",
+      issuedOnDate: "2014-01-02",
+      letterOfIntentDate: "2014-01-02",
+      originData: "XYZ-012",
+      originId: "abc-123",
+      retainagePercent: 10,
+      returnedDate: "2014-01-02",
+      signedContractReceivedDate: "2015-01-30",
+      status: "Approved",
+      vendorId: 1254,
+      accountingMethod: "amount"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\primaryContractLines\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContractLineItem",
+      id: "1234",
+      name: "1234 - Sandbox Test Project",
+      number: "1234",
+      companyId: 123,
+      projectId: 1234,
+      amount: 1000,
+      costCodeId: 77408196,
+      description: "Cleanup",
+      extendedType: "calculated",
+      quantity: 20,
+      lineItemTypeId: 5085801,
+      originData: "AC-1234",
+      originId: 55555,
+      taxCodeId: 1,
+      unitCost: 50,
+      uom: "Hours",
+      wbsCodeId: 34567
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\primaryContracts\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContract",
+      id: "1234",
+      name: "Station 3",
+      title: "Station 3",
+      actualCompletionDate: "2017-03-31",
+      approvalLetterDate: "2014-01-02",
+      architectId: 160586,
+      contractorId: 13556,
+      contractDate: "2014-01-02",
+      contractEstimatedCompletionDate: "2017-01-31",
+      contractStartDate: "2015-01-31",
+      description: "New Building",
+      exclusions: "Decoration",
+      isExecuted: true,
+      executionDate: "2014-01-02",
+      inclusions: "Floor",
+      issuedOnDate: "2014-01-02",
+      letterOfIntentDate: "2014-01-02",
+      originData: "XYZ-012",
+      originId: "abc-123",
+      retainagePercent: 10,
+      returnedDate: "2014-01-02",
+      signedContractReceivedDate: "2015-01-30",
+      status: "Approved",
+      vendorId: 1254,
+      accountingMethod: "amount"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\primaryContractLines\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "PrimaryContractLineItem",
+      id: "1234",
+      name: "1234 - Sandbox Test Project",
+      number: "1234",
+      companyId: 123,
+      projectId: 1234,
+      amount: 1000,
+      costCodeId: 77408196,
+      description: "Cleanup",
+      extendedType: "calculated",
+      quantity: 20,
+      lineItemTypeId: 5085801,
+      originData: "AC-1234",
+      originId: 55555,
+      taxCodeId: 1,
+      unitCost: 50,
+      uom: "Hours",
+      wbsCodeId: 34567
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\projects\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "Project",
+      id: "1234",
+      completionDate: "2015-05-15",
+      totalValue: 10000,
+      warrantyStartDate: "2015-05-16",
+      warrantyEndDate: "2016-06-10",
+      flag: "Yellow",
+      imageId: 10,
+      name: "Project F",
+      officeId: 3610,
+      phone: "310-555-5555",
+      projectNumber: "A-2",
+      publicNotes: "Notes",
+      projectStageId: 1,
+      squareFeet: 5000,
+      stateCode: "CA",
+      timeZone: "US/Pacific",
+      zip: "93110",
+      parentJobId: 2,
+      programId: 5,
+      projectBidTypeId: 2,
+      projectTypeId: 5,
+      projectOwnerTypeId: 8,
+      projectRegionId: 22,
+      projectTemplateId: 99,
+      originId: "657",
+      originData: "AC-1234",
+      originCode: "Code 123",
+      overrideStartDate: "2015-05-15",
+      isOverrideStartDateCheck: true,
+      overrideEndDate: "2015-05-31",
+      isOverrideEndDateCheck: true,
+      estimatedValue: 10000,
+      estimatedStartDate: "2015-05-15",
+      estimatedCompletionDate: "2015-05-31",
+      storeNumber: "3",
+      accountingProjectNumber: "3456",
+      designatedMarketArea: "Southeast",
+      isErpIntegrated: true,
+      latitude: 34.3850464855729,
+      longitude: -119.490849121334,
+      isEnableCopyOfStandardCostCodes: true
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\projects\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    projects: {
+      entityName: "Project",
+      id: "1234",
+      completionDate: "2015-05-15",
+      totalValue: 10000,
+      warrantyStartDate: "2015-05-16",
+      warrantyEndDate: "2016-06-10",
+      flag: "Yellow",
+      imageId: 10,
+      name: "Project F",
+      officeId: 3610,
+      phone: "310-555-5555",
+      projectNumber: "A-2",
+      publicNotes: "Notes",
+      projectStageId: 1,
+      squareFeet: 5000,
+      stateCode: "CA",
+      timeZone: "US/Pacific",
+      zip: "93110",
+      parentJobId: 2,
+      programId: 5,
+      projectBidTypeId: 2,
+      projectTypeId: 5,
+      projectOwnerTypeId: 8,
+      projectRegionId: 22,
+      projectTemplateId: 99,
+      originId: "657",
+      originData: "AC-1234",
+      originCode: "Code 123",
+      overrideStartDate: "2015-05-15",
+      isOverrideStartDateCheck: true,
+      overrideEndDate: "2015-05-31",
+      isOverrideEndDateCheck: true,
+      estimatedValue: 10000,
+      estimatedStartDate: "2015-05-15",
+      estimatedCompletionDate: "2015-05-31",
+      storeNumber: "3",
+      accountingProjectNumber: "3456",
+      designatedMarketArea: "Southeast",
+      isErpIntegrated: true,
+      latitude: 34.3850464855729,
+      longitude: -119.490849121334,
+      isEnableCopyOfStandardCostCodes: true
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\budgetLines\ack:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    budgetLineItems: {
+      entityName: "BudgetLineItem",
+      id: "1234",
+      companyId: 123,
+      projectId: 124,
+      wbsCodeId: 67890,
+      originalBudgetAmount: 10000,
+      uom: "hours",
+      quantity: 250.5,
+      unitCost: 123.5,
+      calculationStrategy: "manual"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\budgetLines\integration:application\json:onpoint-sapi-procore-cmd-v1-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  success: true,
+  header: {
+    apiName: "opg-sapi-salesforce-cmd",
+    version: "v1.0",
+    correlationId: "ccac95f0-fa25-11ed-b753-847b5726456c",
+    timestamp: "2023-05-24T16:56:20.492+05:30"
+  },
+  data: {
+    budgetLineItems: {
+      entityName: "BudgetLineItem",
+      id: "1234",
+      companyId: 123,
+      projectId: 124,
+      wbsCodeId: 67890,
+      originalBudgetAmount: 10000,
+      uom: "hours",
+      quantity: 250.5,
+      unitCost: 123.5,
+      calculationStrategy: "manual"
+    }
+  },
+  error: null
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>

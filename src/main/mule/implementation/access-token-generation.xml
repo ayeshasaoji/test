@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<flow name="access-token-generation-flow" doc:id="f555fa23-f2b5-4360-965c-75f6162f3404" >
+        <until-successful maxRetries="4" doc:name="Until Successful" doc:id="e428e5a0-dc26-482b-8fdf-220469aa9953" millisBetweenRetries="1000" >
+            <ee:cache doc:name="Cache" doc:id="8e151f04-6edb-41f3-8290-35451b4d8c18" cachingStrategy-ref="Caching_Strategy">
+                <ee:transform doc:name="Request Token Payload" doc:id="185548bd-3fea-4dd9-bc26-62510b515c5d" >
+                    <ee:message >
+                        <ee:set-payload ><![CDATA[%dw 2.0
+output application/x-www-form-urlencoded
+---
+{
+  "client_id": Mule::p('secure::procore.accessToken.clientId'),
+  "client_secret": Mule::p('secure::procore.accessToken.clientSecret'),
+  "grant_type": Mule::p('secure::procore.accessToken.grantType'),
+}]]></ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+                <logger level="DEBUG" doc:name="Log Request Token Payload" doc:id="fdf8170f-c350-440e-b6c3-4cb37aece3d0" message="sending: #[payload]" category="com.ccs.token"/>
+                <http:request method="POST" doc:name="Request to generate token" doc:id="b0e278f2-29b6-485a-b5bd-23d9698ea31b" config-ref="HTTP_Request_Procore_Access_Token" path="${secure::procore.accessToken.httpRequest.path}"/>
+				<logger level="INFO" doc:name="Log - No Cache Hit Msg" doc:id="5af2872c-32cb-4047-b22e-1d092d4ee577" message="'no cache hit'" category="com.ccs.token"/>
+            </ee:cache>
+        </until-successful>
+    </flow>
+</mule>
